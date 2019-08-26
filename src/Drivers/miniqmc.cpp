@@ -118,6 +118,8 @@
 #include <Drivers/Mover.hpp>
 #include <getopt.h>
 
+#include <starpu.h>
+
 using namespace std;
 using namespace qmcplusplus;
 
@@ -181,6 +183,9 @@ int main(int argc, char** argv)
   typedef ParticleSet::ParticlePos_t    ParticlePos_t;
   typedef ParticleSet::PosType          PosType;
   // clang-format on
+
+  int sp_stat = starpu_init(NULL); // Initialize StarPU for asynchronous tasking
+  if (sp_stat == 0) perror("StarPU initialization");
 
   Communicate comm(argc, argv);
 
@@ -549,6 +554,8 @@ int main(int argc, char** argv)
         "info_" + std::to_string(na) + "_" + std::to_string(nb) + "_" + std::to_string(nc) + ".xml";
     doc.SaveFile(info_name.c_str());
   }
+
+  starpu_shutdown();
 
   return 0;
 }

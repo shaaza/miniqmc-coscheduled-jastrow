@@ -207,17 +207,40 @@ WaveFunction::posT WaveFunction::evalGrad(ParticleSet& P, int iat)
   return grad_iat;
 }
 
+struct starpu_task* WaveFunction::new_task(struct starpu_codelet *cl,
+                                           struct WaveFunction::ratio_grad_params& args,
+                                           starpu_data_handle_t& handle)
+{
+  struct starpu_task *task = starpu_task_create();
+  task->cl = cl;
+  task->handles[0] = handle;
+  task->cl_arg = &args;
+  task->cl_arg_size = sizeof(args);
+  return task;
+}
+
 WaveFunction::valT WaveFunction::ratioGrad(ParticleSet& P, int iat, posT& grad)
 {
   grad       = valT(0);
   valT ratio = (iat < nelup ? Det_up->ratioGrad(P, iat, grad) : Det_dn->ratioGrad(P, iat, grad));
 
+  valT ratios[Jastrows.size() + 1];
+  starpu_data_handle_t ratios_handle;
+  starpu_vector_data_register(&ratios_handle, STARPU_MAIN_RAM, (uintptr_t)ratios, Jastrows.size() + 1, sizeof(ratios[0]));
+
+  jastrow_timers[0]->start();
   for (size_t i = 0; i < Jastrows.size(); i++)
   {
-    jastrow_timers[i]->start();
-    ratio *= Jastrows[i]->ratioGrad(P, iat, grad);
-    jastrow_timers[i]->stop();
+    struct WaveFunction::ratio_grad_params args = { P, iat, grad, Jastrows, i };
+    starpu_task_submit(new_task(&jastrow_ratio_grad_codelet, args, ratios_handle));
   }
+
+  starpu_data_unregister(ratios_handle);
+  jastrow_timers[0]->stop();
+
+  for (size_t i = 1; i < Jastrows.size() + 1; i++)
+    ratio *= ratios[i];
+
   return ratio;
 }
 

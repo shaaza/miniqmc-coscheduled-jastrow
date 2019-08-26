@@ -42,6 +42,8 @@
 #include <Utilities/qmcpack_version.h>
 #include <getopt.h>
 
+#include <starpu.h>
+
 using namespace std;
 using namespace qmcplusplus;
 
@@ -90,6 +92,8 @@ int main(int argc, char** argv)
   typedef ParticleSet::ParticlePos_t    ParticlePos_t;
   typedef ParticleSet::PosType          PosType;
   // clang-format on
+
+  starpu_init(NULL); // Initialize StarPU for asynchronous tasking
 
   // use the global generator
 
@@ -486,5 +490,6 @@ int main(int argc, char** argv)
   if (!fail)
     cout << "All checks passed for " << wfc_name << std::endl;
 
+  starpu_shutdown();
   return 0;
 }
