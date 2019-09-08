@@ -1,4 +1,5 @@
-LAPACKLIBS=/usr/local/opt/lapack/lib/liblapack.3.8.0.dylib
+MACLAPACKLIBS=/usr/local/opt/lapack/lib/liblapack.3.8.0.dylib
+LAPACKLIBS=
 LAPACKFLAGS="-lm"
 CXX_FLAGS="$(shell pkg-config --cflags starpu-1.3) -lm -lblas -llapack"
 CFLAGS="$(shell pkg-config --cflags starpu-1.3) -lm -lblas -llapack"
@@ -20,9 +21,6 @@ create-build-dir:
 
 clean-build:
 	rm -rf $(BUILD_DIR)
-
-old-cmake-version-setup:
-	cmake -DLAPACK_LIBRARIES=$(LAPACKLIBS) -DLAPACK_LINKER_FLAGS=$(LAPACKFLAGS) -DCMAKE_CXX_FLAGS=$(CXX_FLAGS) -DCMAKE_C_FLAGS=$(CFLAGS) -DCMAKE_CXX_COMPILER=$(CXX_COMPILER) ..
 
 cmake-setup:
 	cmake -B $(BUILD_DIR) -DLAPACK_LIBRARIES=$(LAPACKLIBS) -DLAPACK_LINKER_FLAGS=$(LAPACKFLAGS) -DCMAKE_CXX_FLAGS=$(CXX_FLAGS) -DCMAKE_C_FLAGS=$(CFLAGS) -DCMAKE_CXX_COMPILER=$(CXX_COMPILER) .
@@ -77,3 +75,10 @@ dep-starpu:
 	fi
 
 deps: dep-hwloc dep-starpu dep-lapack dep-cmake dep-gc
+
+old-cmake-version-setup:
+	cmake -DLAPACK_LIBRARIES=$(LAPACKLIBS) -DLAPACK_LINKER_FLAGS=$(LAPACKFLAGS) -DCMAKE_CXX_FLAGS=$(CXX_FLAGS) -DCMAKE_C_FLAGS=$(CFLAGS) -DCMAKE_CXX_COMPILER=$(CXX_COMPILER) ..
+
+build-for-old-cmake: clean-build
+	cp Makefile $(BUILD_DIR)/
+	cd $(BUILD_DIR); make old-cmake-version-setup && make -j 8
