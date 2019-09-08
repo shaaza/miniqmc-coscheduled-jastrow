@@ -56,27 +56,6 @@ private:
   TimerList_t timers;
   TimerList_t jastrow_timers;
 
-  struct ratio_grad_params {
-        ParticleSet& P;
-        int iat;
-        WaveFunction::posT& grad;
-        std::vector<WaveFunctionComponent*>& WFs;
-        size_t i;
-  };
-
-    struct starpu_codelet jastrow_ratio_grad_codelet = {
-            .cpu_funcs = {[](void *buffers[], void *cl_arg) {
-                struct ratio_grad_params* p = (ratio_grad_params*) cl_arg;
-                valT ratio = p->WFs[p->i]->ratioGrad(p->P, p->iat, p->grad);
-
-                valT* ratios = (valT*) STARPU_VECTOR_GET_PTR(buffers[0]);
-                ratios[p->i + 1] = ratio;
-            }},
-            .nbuffers = 1,
-            .modes = {STARPU_W}
-  };
-
-  struct starpu_task* new_task(struct starpu_codelet *cl, struct WaveFunction::ratio_grad_params& args, starpu_data_handle_t& handle);
 public:
   WaveFunction();
   ~WaveFunction();

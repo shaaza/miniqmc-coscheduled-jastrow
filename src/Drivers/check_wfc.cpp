@@ -93,7 +93,8 @@ int main(int argc, char** argv)
   typedef ParticleSet::PosType          PosType;
   // clang-format on
 
-  starpu_init(NULL); // Initialize StarPU for asynchronous tasking
+  int sp_stat = starpu_init(NULL); // Initialize StarPU for asynchronous tasking
+  if (sp_stat == 0) perror("StarPU initialization");
 
   // use the global generator
 

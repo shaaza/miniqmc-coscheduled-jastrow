@@ -27,6 +27,7 @@
 #include <QMCWaveFunctions/Jastrow/ThreeBodyJastrowRef.h>
 #include <QMCWaveFunctions/Jastrow/ThreeBodyJastrow.h>
 #include <Input/Input.hpp>
+#include "QMCWaveFunctions/wavefunction_tasks.hpp"
 
 namespace qmcplusplus
 {
@@ -175,49 +176,32 @@ void WaveFunction::setupTimers()
   }
 }
 
-void WaveFunction::evaluateLog(ParticleSet& P)
-{
-  constexpr valT czero(0);
-  if (FirstTime)
-  {
-    P.G      = czero;
-    P.L      = czero;
-    LogValue = Det_up->evaluateLog(P, P.G, P.L);
-    LogValue += Det_dn->evaluateLog(P, P.G, P.L);
-    for (size_t i = 0; i < Jastrows.size(); i++)
-    {
-      jastrow_timers[i]->start();
-      LogValue += Jastrows[i]->evaluateLog(P, P.G, P.L);
-      jastrow_timers[i]->stop();
+    void WaveFunction::evaluateLog(ParticleSet &P) {
+      constexpr valT czero(0);
+      if (FirstTime) {
+        P.G = czero;
+        P.L = czero;
+        LogValue = Det_up->evaluateLog(P, P.G, P.L);
+        LogValue += Det_dn->evaluateLog(P, P.G, P.L);
+        for (size_t i = 0; i < Jastrows.size(); i++) {
+          jastrow_timers[i]->start();
+          LogValue += Jastrows[i]->evaluateLog(P, P.G, P.L);
+          jastrow_timers[i]->stop();
+        }
+        FirstTime = false;
+      }
     }
-    FirstTime = false;
-  }
-}
 
-WaveFunction::posT WaveFunction::evalGrad(ParticleSet& P, int iat)
-{
-  posT grad_iat = (iat < nelup ? Det_up->evalGrad(P, iat) : Det_dn->evalGrad(P, iat));
+    WaveFunction::posT WaveFunction::evalGrad(ParticleSet &P, int iat) {
+      posT grad_iat = (iat < nelup ? Det_up->evalGrad(P, iat) : Det_dn->evalGrad(P, iat));
 
-  for (size_t i = 0; i < Jastrows.size(); i++)
-  {
-    jastrow_timers[i]->start();
-    grad_iat += Jastrows[i]->evalGrad(P, iat);
-    jastrow_timers[i]->stop();
-  }
-  return grad_iat;
-}
-
-struct starpu_task* WaveFunction::new_task(struct starpu_codelet *cl,
-                                           struct WaveFunction::ratio_grad_params& args,
-                                           starpu_data_handle_t& handle)
-{
-  struct starpu_task *task = starpu_task_create();
-  task->cl = cl;
-  task->handles[0] = handle;
-  task->cl_arg = &args;
-  task->cl_arg_size = sizeof(args);
-  return task;
-}
+      for (size_t i = 0; i < Jastrows.size(); i++) {
+        jastrow_timers[i]->start();
+        grad_iat += Jastrows[i]->evalGrad(P, iat);
+        jastrow_timers[i]->stop();
+      }
+      return grad_iat;
+    }
 
 WaveFunction::valT WaveFunction::ratioGrad(ParticleSet& P, int iat, posT& grad)
 {
@@ -231,8 +215,9 @@ WaveFunction::valT WaveFunction::ratioGrad(ParticleSet& P, int iat, posT& grad)
   jastrow_timers[0]->start();
   for (size_t i = 0; i < Jastrows.size(); i++)
   {
-    struct WaveFunction::ratio_grad_params args = { P, iat, grad, Jastrows, i };
-    starpu_task_submit(new_task(&jastrow_ratio_grad_codelet, args, ratios_handle));
+    struct ratio_grad_params args = { P, iat, grad, Jastrows, i };
+    int task_submitted = starpu_task_submit(new_task(&jastrow_ratio_grad_codelet, args, ratios_handle));
+    if (task_submitted != 0) perror("Task submission failure");
   }
 
   starpu_data_unregister(ratios_handle);
