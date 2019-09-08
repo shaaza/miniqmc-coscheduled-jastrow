@@ -1,9 +1,9 @@
 MACLAPACKLIBS=/usr/local/opt/lapack/lib/liblapack.3.8.0.dylib
-LAPACKLIBS=
+LAPACKLIBS=/usr/local/opt/lapack/lib/liblapack.3.8.0.dylib
 LAPACKFLAGS="-lm"
 CXX_FLAGS="$(shell pkg-config --cflags starpu-1.3) -lm -lblas -llapack"
 CFLAGS="$(shell pkg-config --cflags starpu-1.3) -lm -lblas -llapack"
-CXX_COMPILER=g++
+CXX_COMPILER=g++-9
 BUILD_DIR=./build
 
 HWLOC_VERSION=hwloc-2.0.4
@@ -62,15 +62,17 @@ tests:
 
 	@echo $$"$(COLOR)$(BOLD)[TESTS] Done$(RESET)"
 
+## Building dependencies from source
+
 dep-hwloc:
 	rm -rf $(HWLOC_DIR)
 	cd $(abspath $(CURDIR)/..); wget $(HWLOC_URL) && tar xvzf $(HWLOC_VERSION).tar.gz && \
 	cd $(HWLOC_VERSION) && mkdir -p build && \
 	./configure --prefix=$(HWLOC_BUILD_DIR) && make && make install
-	if grep -q "#HWLOC" $(HOME)/.bashrc; then \
+	if ! grep -q "#HWLOC" $(HOME)/.bashrc; then \
 		echo "#HWLOC" >> $(HOME)/.bashrc && \
 		echo "export PATH=$(HWLOC_BUILD_DIR)/bin:$$PATH" >> $(HOME)/.bashrc && \
-		echo "export PKG_CONFIG_PATH=$(HWLOC_BUILD_DIR)/lib/pkgconfig:$$PATH" >> $(HOME)/.bashrc ; \
+		echo "export PKG_CONFIG_PATH=$(HWLOC_BUILD_DIR)/lib/pkgconfig:$$PKG_CONFIG_PATH" >> $(HOME)/.bashrc ; \
 	fi
 
 dep-starpu:
@@ -78,23 +80,22 @@ dep-starpu:
 	cd $(abspath $(CURDIR)/..); wget $(STARPU_URL) && tar xvzf $(STARPU_VERSION).tar.gz && \
 	cd $(STARPU_VERSION) && mkdir -p build && cd build && \
 	source $(HOME)/.bashrc; ../configure --prefix=$(STARPU_BUILD_DIR) --with-hwloc=$(HWLOC_BUILD_DIR) && make && make install
-	if grep -q "#STARPU" $(HOME)/.bashrc; then \
+	if ! grep -q "#STARPU" $(HOME)/.bashrc; then \
 		echo "#STARPU" >> $(HOME)/.bashrc && \
 		echo "export PATH=$(STARPU_BUILD_DIR)/bin:$$PATH" >> $(HOME)/.bashrc && \
-		echo "export PKG_CONFIG_PATH=$(STARPU_BUILD_DIR)/lib/pkgconfig:$$PATH" >> $(HOME)/.bashrc ; \
+		echo "export PKG_CONFIG_PATH=$(STARPU_BUILD_DIR)/lib/pkgconfig:$$PKG_CONFIG_PATH" >> $(HOME)/.bashrc ; \
 	fi
-
-load-modules:
-	/usr/bin/modulecmd bash load cports6 cports apps
-	/usr/bin/modulecmd bash load hwloc lapack/3.7.1-gnu gcc/7.4.0-gnu cmake/3.8.2-gnu
 
 deps: dep-hwloc dep-starpu
 
-# dep-lapack dep-cmake dep-gc
+# Others not included: dep-lapack dep-cmake dep-gc
+
+# Lonsdale specific targets
 
 old-cmake-version-setup:
 	cmake -DLAPACK_LIBRARIES=$(LAPACKLIBS) -DLAPACK_LINKER_FLAGS=$(LAPACKFLAGS) -DCMAKE_CXX_FLAGS=$(CXX_FLAGS) -DCMAKE_C_FLAGS=$(CFLAGS) -DCMAKE_CXX_COMPILER=$(CXX_COMPILER) ..
 
 build-for-old-cmake: clean-build create-build-dir
-	cp Makefile $(BUILD_DIR)/
+	source $(CURDIR)/module_loader.sh; module load cports6 cports apps hwloc lapack/3.7.1-gnu gcc/7.4.0-gnu cmake/3.8.2-gnu && \
+	cp Makefile $(BUILD_DIR)/ && \
 	cd $(BUILD_DIR); make old-cmake-version-setup && make -j 8
