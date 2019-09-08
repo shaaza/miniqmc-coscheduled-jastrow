@@ -90,7 +90,9 @@ deps: dep-hwloc dep-starpu
 
 # Others not included: dep-lapack dep-cmake dep-gc
 
-# Lonsdale specific targets
+# Lonsdale specific targets since:
+# i) dependencies are module loaded
+# ii) cmake -B requires latest cmake
 
 old-cmake-version-setup:
 	cmake -DLAPACK_LIBRARIES=$(LAPACKLIBS) -DLAPACK_LINKER_FLAGS=$(LAPACKFLAGS) -DCMAKE_CXX_FLAGS=$(CXX_FLAGS) -DCMAKE_C_FLAGS=$(CFLAGS) -DCMAKE_CXX_COMPILER=$(CXX_COMPILER) ..
