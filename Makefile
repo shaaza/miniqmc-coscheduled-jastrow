@@ -3,7 +3,7 @@ LAPACKLIBS=
 LAPACKFLAGS="-lm"
 CXX_FLAGS="-lm -lblas -llapack"
 CFLAGS="-lm -lblas -llapack"
-CXX_COMPILER=g++-9
+CXX_COMPILER=g++
 BUILD_DIR=./build
 
 COLOR=\033[0;35m
@@ -27,7 +27,7 @@ build: clean-build create-build-dir cmake-setup
 	make -C build -j 8
 
 run:
-	$(BUILD_DIR)/bin/miniqmc
+	$(BUILD_DIR)/bin/miniqmc $(RUNARGS)
 
 tests:
 	@echo $$"$(COLOR)$(BOLD)\n[TESTS] Running unit tests$(RESET)"
@@ -65,3 +65,12 @@ build-for-old-cmake: clean-build create-build-dir
 	source $(CURDIR)/module_loader.sh; module load cports6 cports apps lapack/3.7.1-gnu gcc/7.4.0-gnu cmake/3.8.2-gnu && \
 	cp Makefile $(BUILD_DIR)/ && \
 	cd $(BUILD_DIR); make old-cmake-version-setup && make -j 8
+
+run-lonsdale:
+	source $(CURDIR)/module_loader.sh; module load cports6 cports apps hwloc lapack/3.7.1-gnu gcc/7.4.0-gnu cmake/3.8.2-gnu && \
+	$(BUILD_DIR)/bin/miniqmc $(RUNARGS)
+
+# Possible StarPU cflags
+# --enable-fast to disable assertions
+# --enable-perf-debug --disable-shared --disable-build-tests --disable-build-examples to enable gprof
+# --with-fxt=$FXTDIR for generating FxT traces
