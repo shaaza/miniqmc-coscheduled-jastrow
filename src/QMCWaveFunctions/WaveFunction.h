@@ -56,6 +56,8 @@ private:
   TimerList_t timers;
   TimerList_t jastrow_timers;
 
+  starpu_data_handle_t ratios_handle;
+
 public:
   WaveFunction();
   ~WaveFunction();

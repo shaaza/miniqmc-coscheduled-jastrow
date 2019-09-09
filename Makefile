@@ -1,9 +1,9 @@
 MACLAPACKLIBS=/usr/local/opt/lapack/lib/liblapack.3.8.0.dylib
-LAPACKLIBS=/usr/local/opt/lapack/lib/liblapack.3.8.0.dylib
+LAPACKLIBS=
 LAPACKFLAGS="-lm"
 CXX_FLAGS="$(shell pkg-config --cflags starpu-1.3) -lm -lblas -llapack"
 CFLAGS="$(shell pkg-config --cflags starpu-1.3) -lm -lblas -llapack"
-CXX_COMPILER=g++-9
+CXX_COMPILER=g++
 BUILD_DIR=./build
 
 HWLOC_VERSION=hwloc-2.0.4
@@ -15,6 +15,12 @@ STARPU_VERSION=starpu-1.3.2
 STARPU_URL=http://starpu.gforge.inria.fr/files/starpu-1.3.2/$(STARPU_VERSION).tar.gz
 STARPU_DIR=$(abspath $(CURDIR)/../starpu-1.3.2)
 STARPU_BUILD_DIR=$(abspath $(CURDIR)/../starpu-1.3.2/build)
+
+FXT_VERSION=fxt-0.3.9
+FXT_URL=http://download.savannah.gnu.org/releases/fkt/$(FXT_VERSION).tar.gz
+FXT_DIR=$(abspath $(CURDIR)/../fxt-0.3.9)
+FXT_BUILD_DIR=$(abspath $(CURDIR)/../fxt-0.3.9/build)
+
 
 COLOR=\033[0;35m
 BOLD=\033[1m
@@ -37,7 +43,7 @@ build: clean-build create-build-dir cmake-setup
 	make -C build -j 8
 
 run:
-	$(BUILD_DIR)/bin/miniqmc
+	$(BUILD_DIR)/bin/miniqmc $(RUNARGS)
 
 tests:
 	@echo $$"$(COLOR)$(BOLD)\n[TESTS] Running unit tests$(RESET)"
@@ -79,12 +85,18 @@ dep-starpu:
 	rm -rf $(STARPU_DIR)
 	cd $(abspath $(CURDIR)/..); wget $(STARPU_URL) && tar xvzf $(STARPU_VERSION).tar.gz && \
 	cd $(STARPU_VERSION) && mkdir -p build && cd build && \
-	source $(HOME)/.bashrc; ../configure --prefix=$(STARPU_BUILD_DIR) --with-hwloc=$(HWLOC_BUILD_DIR) && make && make install
+	source $(HOME)/.bashrc; ../configure --prefix=$(STARPU_BUILD_DIR) --with-hwloc=$(HWLOC_BUILD_DIR) $(STARPU_FLAGS) && make && make install
 	if ! grep -q "#STARPU" $(HOME)/.bashrc; then \
 		echo "#STARPU" >> $(HOME)/.bashrc && \
 		echo "export PATH=$(STARPU_BUILD_DIR)/bin:$$PATH" >> $(HOME)/.bashrc && \
 		echo "export PKG_CONFIG_PATH=$(STARPU_BUILD_DIR)/lib/pkgconfig:$$PKG_CONFIG_PATH" >> $(HOME)/.bashrc ; \
 	fi
+
+dep-fxt:
+	rm -rf $(FXT_DIR)
+	cd $(abspath $(CURDIR)/..); wget $(FXT_URL) && tar xvzf $(FXT_VERSION).tar.gz && \
+	cd $(FXT_VERSION) && mkdir -p build && cd build && \
+	source $(HOME)/.bashrc; ../configure --prefix=$(FXT_BUILD_DIR) && make && make install
 
 deps: dep-hwloc dep-starpu
 
@@ -101,3 +113,12 @@ build-for-old-cmake: clean-build create-build-dir
 	source $(CURDIR)/module_loader.sh; module load cports6 cports apps hwloc lapack/3.7.1-gnu gcc/7.4.0-gnu cmake/3.8.2-gnu && \
 	cp Makefile $(BUILD_DIR)/ && \
 	cd $(BUILD_DIR); make old-cmake-version-setup && make -j 8
+
+run-lonsdale:
+	source $(CURDIR)/module_loader.sh; module load cports6 cports apps hwloc lapack/3.7.1-gnu gcc/7.4.0-gnu cmake/3.8.2-gnu && \
+	$(BUILD_DIR)/bin/miniqmc $(RUNARGS)
+
+# Possible StarPU cflags
+# --enable-fast to disable assertions
+# --enable-perf-debug --disable-shared --disable-build-tests --disable-build-examples to enable gprof
+# --with-fxt=$FXTDIR for generating FxT traces

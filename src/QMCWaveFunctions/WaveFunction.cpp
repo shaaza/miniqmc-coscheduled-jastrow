@@ -206,8 +206,8 @@ WaveFunction::valT WaveFunction::ratioGrad(ParticleSet& P, int iat, posT& grad)
   valT ratio = (iat < nelup ? Det_up->ratioGrad(P, iat, grad) : Det_dn->ratioGrad(P, iat, grad));
 
   valT ratios[Jastrows.size() + 1];
-  starpu_data_handle_t ratios_handle;
   starpu_vector_data_register(&ratios_handle, STARPU_MAIN_RAM, (uintptr_t)ratios, Jastrows.size() + 1, sizeof(ratios[0]));
+  starpu_data_set_sequential_consistency_flag(ratios_handle, 0);
 
   jastrow_timers[0]->start();
   for (size_t i = 0; i < Jastrows.size(); i++)
